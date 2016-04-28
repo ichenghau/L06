@@ -21,7 +21,7 @@ namespace L05_2
 				FontAttributes = FontAttributes.Bold,
 				VerticalTextAlignment = TextAlignment.Center
 			};
-			nameLabel.SetBinding(Label.TextProperty, new Binding("Name"));
+			nameLabel.SetBinding(Label.TextProperty, new Binding("NAME"));
 
 			var addressLabel = new Label
 			{
@@ -29,7 +29,7 @@ namespace L05_2
 				FontSize = Device.GetNamedSize(NamedSize.Small, typeof(Label)),
 				VerticalTextAlignment = TextAlignment.Center
 			};
-			addressLabel.SetBinding(Label.TextProperty, new Binding("Address"));
+			addressLabel.SetBinding(Label.TextProperty, new Binding("addr"));
 
 			var callButton = new MyListViewCellButton
 			{
@@ -40,7 +40,7 @@ namespace L05_2
 				VerticalOptions = LayoutOptions.CenterAndExpand,
 				
 			};
-			callButton.SetBinding(Button.CommandParameterProperty, new Binding("Tel"));
+			callButton.SetBinding(Button.CommandParameterProperty, new Binding("TEL"));
 		    callButton.Clicked +=async (sender, e) =>
 		    {
 		        var b = (Button) sender;

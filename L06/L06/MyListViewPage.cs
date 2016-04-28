@@ -11,73 +11,86 @@ namespace L05_2
 {
     public class MyListViewPage : ContentPage
     {
-        private Button searchButton;
-        private Entry cityEntry;
-        private Entry areaEntry;
+        private Picker cityEntry;
+        private Picker areaEntry;
         private List<FamilyStore> myStoreDataList;
+        private ListView listView;
+        private StackLayout stackLayout;
         private readonly WebApiServices myWebApiService;
         public MyListViewPage(string title)
         {
             myStoreDataList = new List<FamilyStore>();
             myWebApiService = new WebApiServices();
-
-            searchButton = new Button {Text = "Search"};
-            cityEntry = new Entry { Placeholder = "請輸入城市名稱" };
-            areaEntry = new Entry{ Placeholder = "請輸入行政區域"};
-
-            searchButton.Clicked += async (sender, e) =>
+            cityEntry = new Picker() { Title = "城市" };
+            areaEntry = new Picker() { Title="區域" };
+            
+            foreach (var item in GetTown())
             {
-                if (cityEntry != null && cityEntry.Text == string.Empty)
-                {
-                    cityEntry.Text = "台北市";
-                }
-                if (areaEntry != null && areaEntry.Text == string.Empty)
-                {
-                    areaEntry.Text = "大安區";
-                }
-                var resultData = await myWebApiService.GetDataAsync(cityEntry.Text, areaEntry.Text);
-                myStoreDataList = Newtonsoft.Json.JsonConvert.DeserializeObject<List<FamilyStore>>(resultData);
+                cityEntry.Items.Add(item);
+            }
+            cityEntry.SelectedIndexChanged += CityEntry_SelectedIndexChanged;
 
-                Debug.WriteLine(myStoreDataList.Count);
-            };
+
+            foreach (var item in GetStoreTown().Where(w=> cityEntry.Items[0]==w.City))
+            {
+                areaEntry.Items.Add(item.Town);
+            }
+
+            areaEntry.SelectedIndexChanged += AreaEntry_SelectedIndexChanged;
 
             Title = title;
-            var listView = new ListView
-            {
-                IsPullToRefreshEnabled = true,
-                RowHeight = 80,
-                ItemsSource = new[]
-                {
-                    new StoreData {Name = "全家大安店", Address = "台北市大安區大安路一段20號", Tel = "02-27117896"},
-                    new StoreData {Name = "全家仁慈店", Address = "台北市大安區仁愛路四段48巷6號", Tel = "02-27089002"},
-                    new StoreData {Name = "全家明曜店", Address = "台北市大安區仁愛路四段151巷34號", Tel = "02-27780326"},
-                    new StoreData {Name = "全家國泰店", Address = "台北市大安區仁愛路四段266巷15弄10號", Tel = "02-27542056"},
-                    new StoreData {Name = "全家忠愛店", Address = "台北市大安區仁愛路四段27巷43號", Tel = "02-27314580"},
-                },
-                ItemTemplate = new DataTemplate(typeof (MyListViewCell))
-            };
 
-
-            listView.ItemTapped += (sender, e) =>
-            {
-                var baseUrl = "https://www.google.com.tw/maps/place/";
-                var storeData = e.Item as StoreData;
-               
-                if (storeData != null)
-                    Device.OpenUri(new Uri( $"{baseUrl}{storeData.Address}"));
-
-                ((ListView)sender).SelectedItem = null;
-            };
-
-            Padding = new Thickness(0, 20, 0, 0);
-            Content = new StackLayout
+            stackLayout = new StackLayout
             {
                 Orientation = StackOrientation.Vertical,
                 Children =
                 {
                     cityEntry,
                     areaEntry,
-                    searchButton,
+                    //searchButton,
+                    new Label
+                    {
+                        HorizontalTextAlignment= TextAlignment.Center,
+                        Text = Title,
+                        FontSize = 30
+                    }
+                }
+            };
+            Padding = new Thickness(0, 20, 0, 0);
+            Content = stackLayout;
+        }
+
+        private void CityEntry_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            areaEntry.Items.Clear();
+            foreach (var item in GetStoreTown().Where(w => cityEntry.Items[cityEntry.SelectedIndex] == w.City))
+            {
+                areaEntry.Items.Add(item.Town);
+            }
+        }
+
+        private async void AreaEntry_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            var resultData = await myWebApiService.GetDataAsync(cityEntry.Items[cityEntry.SelectedIndex], areaEntry.Items[areaEntry.SelectedIndex]);
+            myStoreDataList = Newtonsoft.Json.JsonConvert.DeserializeObject<List<FamilyStore>>(resultData);
+
+            listView = new ListView
+            {
+                IsPullToRefreshEnabled = true,
+                RowHeight = 80,
+                ItemsSource = myStoreDataList,
+                ItemTemplate = new DataTemplate(typeof(MyListViewCell))
+            };
+
+            listView.ItemTapped += ListView_ItemTapped;
+
+            stackLayout = new StackLayout
+            {
+                Orientation = StackOrientation.Vertical,
+                Children =
+                {
+                    cityEntry,
+                    areaEntry,
                     new Label
                     {
                         HorizontalTextAlignment= TextAlignment.Center,
@@ -87,6 +100,101 @@ namespace L05_2
                     listView
                 }
             };
+
+            Content = stackLayout;
+        }
+
+        private void ListView_ItemTapped(object sender, ItemTappedEventArgs e)
+        {
+            var baseUrl = "https://www.google.com.tw/maps/place/";
+            var storeData = e.Item as FamilyStore;
+
+            if (storeData != null)
+                Device.OpenUri(new Uri($"{baseUrl}{storeData.addr}"));
+
+            ((ListView)sender).SelectedItem = null;
+        }
+
+        private List<string> GetTown()
+        {
+            var rtn = new List<string>();
+
+            rtn.Add("台北市");
+            rtn.Add("新北市");
+
+            return rtn;
+
+        }
+
+        private List<StoreTown> GetStoreTown()
+        {
+            var rtn = new List<StoreTown>();
+
+            rtn.Add(new StoreTown() {
+                 City= "台北市",
+                 Town= "中正區"
+            });
+            rtn.Add(new StoreTown()
+            {
+                City = "台北市",
+                Town = "大同區"
+            });
+            rtn.Add(new StoreTown()
+            {
+                City = "台北市",
+                Town = "中山區"
+            });
+            rtn.Add(new StoreTown()
+            {
+                City = "台北市",
+                Town = "松山區"
+            });
+            rtn.Add(new StoreTown()
+            {
+                City = "台北市",
+                Town = "大安區"
+            });
+            rtn.Add(new StoreTown()
+            {
+                City = "新北市",
+                Town = "萬里區"
+            });
+            rtn.Add(new StoreTown()
+            {
+                City = "新北市",
+                Town = "金山區"
+            });
+            rtn.Add(new StoreTown()
+            {
+                City = "新北市",
+                Town = "板橋區"
+            });
+            rtn.Add(new StoreTown()
+            {
+                City = "新北市",
+                Town = "汐止區"
+            });
+            rtn.Add(new StoreTown()
+            {
+                City = "新北市",
+                Town = "深坑區"
+            });
+
+            return rtn;
+        }
+
+        private class StoreTown
+        {
+            /// <summary>
+            /// 區
+            /// </summary>
+            public string Town { get; set; }
+
+            /// <summary>
+            /// 城市
+            /// </summary>
+            public string City { get; set; }
+
         }
     }
 
@@ -113,4 +221,8 @@ namespace L05_2
         public string road { get; set; }
         public object twoice { get; set; }
     }
+
+   
+
+
 }
